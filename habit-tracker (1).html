@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a0a">
+<title>Habitudes</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=Nunito:wght@800;900&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+:root {
+  --bg: #0d0d0d;
+  --surface: #181818;
+  --border: rgba(255,255,255,0.07);
+  --accent: #c8763a;
+  --accent-dim: rgba(200,118,58,0.18);
+  --accent-glow: rgba(200,118,58,0.35);
+  --green: #1e5c32;
+  --green-bright: #4ade80;
+  --green-glow: rgba(74,222,128,0.28);
+  --text: #ede5da;
+  --muted: rgba(237,229,218,0.38);
+  --grid: rgba(255,255,255,0.022);
+}
+
+html, body { height:100%; background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; overflow:hidden; }
+
+body::before {
+  content:''; position:fixed; inset:0;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 36px 36px; pointer-events:none; z-index:0;
+}
+
+#app {
+  position:relative; z-index:1; height:100%;
+  display:flex; flex-direction:column; max-width:480px; margin:0 auto;
+  padding: env(safe-area-inset-top,16px) 0 env(safe-area-inset-bottom,0) 0;
+}
+
+/* HEADER */
+.header { padding:14px 22px 0; display:flex; justify-content:space-between; align-items:center; }
+.header-title { font-family:'Syne',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); }
+.add-btn {
+  width:36px; height:36px; border-radius:50%; background:var(--surface);
+  border:1px solid var(--border); color:var(--text); font-size:22px;
+  cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; line-height:1;
+}
+.add-btn:active { transform:scale(0.88); background:var(--accent); }
+
+/* GAUGE */
+.gauge-section { padding:18px 22px 0; display:flex; flex-direction:column; align-items:center; gap:10px; }
+
+.gauge-pill {
+  position:relative; width:100%;
+  background:var(--surface);
+  border:1.5px solid var(--accent);
+  border-radius:999px;
+  padding:28px 30px;
+  text-align:center; overflow:hidden;
+  box-shadow: 0 0 50px var(--accent-glow), inset 0 0 40px rgba(0,0,0,0.6);
+  transition: border-color 0.4s ease, box-shadow 0.4s ease;
+}
+.gauge-pill::after {
+  content:''; position:absolute; inset:0; border-radius:999px;
+  background: radial-gradient(ellipse at 28% 40%, rgba(200,118,58,0.12) 0%, transparent 65%);
+  pointer-events:none;
+}
+.gauge-fill {
+  position:absolute; left:0; top:0; bottom:0;
+  border-radius:999px; width:0%;
+  transition: background 0.4s ease;
+}
+.gauge-pct {
+  position:relative; z-index:1;
+  font-family:'Nunito',sans-serif; font-size:80px; font-weight:900;
+  color:var(--accent); letter-spacing:-1px;
+  line-height:1;
+  transition: color 0.4s ease, text-shadow 0.4s ease;
+}
+
+.gauge-sub { text-align:center; }
+.gauge-count { font-family:'Syne',sans-serif; font-size:22px; font-weight:700; color:var(--text); }
+.gauge-label { font-size:9px; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); margin-top:3px; }
+
+/* CALENDAR */
+.calendar-section { padding:16px 22px 0; }
+.week-row { display:flex; justify-content:space-between; gap:4px; }
+
+.day-cell {
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:5px;
+  padding:8px 2px 7px; border-radius:18px; cursor:pointer;
+  transition:all 0.2s; border:1.5px solid transparent;
+}
+.day-cell.today {
+  background: rgba(200,118,58,0.1);
+  border-color: var(--accent);
+}
+.day-cell.selected-day:not(.today) {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.2);
+}
+.day-cell.past { cursor:pointer; }
+.day-cell.future { opacity:0.35; pointer-events:none; }
+.day-name { font-size:9px; letter-spacing:0.07em; font-weight:600; color:var(--muted); text-transform:uppercase; }
+.day-num {
+  font-family:'Syne',sans-serif; font-size:15px; font-weight:700; color:var(--text);
+  width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:50%;
+}
+.day-cell.today .day-num {
+  background:var(--accent); color:#fff;
+  box-shadow: 0 0 14px var(--accent-glow); font-size:16px;
+}
+.day-dot { width:5px; height:5px; border-radius:50%; background:transparent; }
+.day-cell.today .day-dot { background:var(--accent); }
+.day-cell.has-completions .day-dot { background:var(--green-bright); }
+.day-cell.today.has-completions .day-dot { background:var(--accent); }
+
+/* DIVIDER */
+.divider { margin:14px 22px 0; height:1px; background:var(--border); }
+
+/* HABITS */
+.habits-scroll {
+  flex:1; overflow-y:auto; padding:12px 22px 24px;
+  display:flex; flex-direction:column; gap:10px; -webkit-overflow-scrolling:touch;
+}
+.habits-scroll::-webkit-scrollbar { display:none; }
+
+.habit-item {
+  position:relative; display:flex; align-items:center; justify-content:space-between;
+  padding:16px; border-radius:22px; background:var(--surface);
+  border:1.5px solid var(--border); cursor:pointer; overflow:hidden; user-select:none;
+  transition: border-color 0.35s ease, box-shadow 0.35s ease;
+  touch-action: pan-y;
+}
+/* the sliding inner layer */
+.habit-inner {
+  display:flex; align-items:center; justify-content:space-between;
+  width:100%; position:relative; z-index:1;
+  transition: transform 0.3s cubic-bezier(0.25,1,0.5,1);
+  will-change: transform;
+}
+/* red delete reveal behind */
+.habit-delete-bg {
+  position:absolute; right:0; top:0; bottom:0;
+  width:90px; border-radius:0 20px 20px 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(220,38,38,0.85) 40%);
+  display:flex; align-items:center; justify-content:flex-end; padding-right:18px;
+  opacity:0; transition:opacity 0.15s ease; pointer-events:none; z-index:0;
+}
+.habit-delete-bg svg { color:#fff; width:22px; height:22px; }
+.habit-item::before {
+  content:''; position:absolute; inset:0; border-radius:22px;
+  background:linear-gradient(90deg, rgba(30,92,50,0.55) 0%, transparent 80%);
+  opacity:0; transition:opacity 0.4s ease;
+}
+.habit-item.done::before { opacity:1; }
+.habit-item.done { border-color:rgba(74,222,128,0.35); box-shadow:0 0 22px var(--green-glow); }
+
+.habit-left { display:flex; align-items:center; gap:14px; flex:1; min-width:0; }
+
+/* iOS-style icon: dark circle with gradient like the screenshot */
+.habit-emoji-wrap {
+  width:46px; height:46px; border-radius:50%; flex-shrink:0;
+  background: radial-gradient(circle at 35% 35%, #2e2e2e 0%, #111 100%);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.07);
+  display:flex; align-items:center; justify-content:center; font-size:24px;
+  transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.35s;
+}
+.habit-item.done .habit-emoji-wrap {
+  box-shadow: 0 2px 12px rgba(74,222,128,0.3), inset 0 1px 0 rgba(255,255,255,0.07);
+}
+
+/* Swoosh animations */
+.swoosh-out  { animation: swooshOut  0.3s cubic-bezier(0.55,0,1,0.45) forwards; }
+.swoosh-in   { animation: swooshIn   0.4s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+.swoosh-bout { animation: swooshBOut 0.25s cubic-bezier(0.55,0,1,0.45) forwards; }
+.swoosh-bin  { animation: swooshBIn  0.35s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+@keyframes swooshOut  { from{transform:translateX(0) scale(1) rotate(0deg);opacity:1} to{transform:translateX(65px) scale(0.35) rotate(28deg);opacity:0} }
+@keyframes swooshIn   { from{transform:translateX(-55px) scale(0.35) rotate(-22deg);opacity:0} to{transform:translateX(0) scale(1) rotate(0deg);opacity:1} }
+@keyframes swooshBOut { from{transform:translateX(0) scale(1) rotate(0deg);opacity:1} to{transform:translateX(-55px) scale(0.35) rotate(-22deg);opacity:0} }
+@keyframes swooshBIn  { from{transform:translateX(65px) scale(0.35) rotate(22deg);opacity:0} to{transform:translateX(0) scale(1) rotate(0deg);opacity:1} }
+
+.habit-name { font-size:16px; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color 0.3s; }
+.habit-item.done .habit-name { color:var(--green-bright); }
+
+.habit-actions { display:flex; gap:8px; align-items:center; flex-shrink:0; }
+
+.habit-check {
+  width:34px; height:34px; border-radius:50%;
+  background:rgba(255,255,255,0.055); border:1.5px solid rgba(255,255,255,0.12);
+  display:flex; align-items:center; justify-content:center;
+  transition: all 0.35s cubic-bezier(0.34,1.56,0.64,1);
+}
+.habit-item.done .habit-check {
+  background:var(--green-bright); border-color:var(--green-bright);
+  box-shadow:0 0 18px rgba(74,222,128,0.6); transform:scale(1.12);
+}
+.check-icon {
+  opacity:0; color:#0a0a0a; font-size:17px; font-weight:800;
+  transition:opacity 0.2s 0.12s, transform 0.3s 0.1s; transform:scale(0.5);
+}
+.habit-item.done .check-icon { opacity:1; transform:scale(1); }
+
+/* Ripple */
+.ripple { position:absolute; border-radius:50%; background:rgba(74,222,128,0.22); transform:scale(0); animation:rippleAnim 0.75s linear; pointer-events:none; }
+@keyframes rippleAnim { to { transform:scale(5); opacity:0; } }
+
+/* Burst */
+.burst { position:absolute; border-radius:50%; pointer-events:none; animation:burstAnim 0.52s ease-out forwards; }
+@keyframes burstAnim { 0%{transform:translate(0,0) scale(1);opacity:1} 100%{transform:translate(var(--tx),var(--ty)) scale(0);opacity:0} }
+
+/* Empty */
+.empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:40px; color:var(--muted); text-align:center; }
+.empty-icon { font-size:38px; opacity:0.35; }
+.empty-text { font-size:14px; line-height:1.6; }
+
+/* MODAL */
+.modal-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,0.82);
+  backdrop-filter:blur(10px); z-index:100;
+  display:flex; align-items:flex-end; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity 0.3s;
+}
+.modal-overlay.open { opacity:1; pointer-events:all; }
+.modal {
+  background:#1c1c1c; border:1px solid rgba(255,255,255,0.09);
+  border-radius:30px 30px 0 0; padding:22px 22px calc(22px + env(safe-area-inset-bottom,0px));
+  width:100%; max-width:480px;
+  transform:translateY(100%); transition:transform 0.42s cubic-bezier(0.34,1.56,0.64,1);
+}
+.modal-overlay.open .modal { transform:translateY(0); }
+.modal-handle { width:36px; height:4px; border-radius:2px; background:rgba(255,255,255,0.12); margin:0 auto 18px; }
+.modal-title { font-family:'Syne',sans-serif; font-size:18px; font-weight:700; margin-bottom:18px; }
+.input-field {
+  width:100%; background:var(--surface); border:1.5px solid var(--border);
+  border-radius:14px; padding:14px 16px; color:var(--text);
+  font-family:'DM Sans',sans-serif; font-size:16px; outline:none;
+  transition:border-color 0.2s; margin-bottom:14px;
+}
+.input-field:focus { border-color:var(--accent); }
+.input-field::placeholder { color:var(--muted); }
+.emoji-label { font-size:11px; color:var(--muted); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:10px; }
+.emoji-grid { display:grid; grid-template-columns:repeat(8,1fr); gap:7px; margin-bottom:20px; }
+.emoji-option {
+  aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+  font-size:20px; border-radius:11px; background:var(--surface);
+  border:1.5px solid var(--border); cursor:pointer; transition:all 0.18s;
+}
+.emoji-option.selected, .emoji-option:active { border-color:var(--accent); background:rgba(200,118,58,0.16); transform:scale(1.12); }
+.confirm-btn {
+  width:100%; padding:16px; border-radius:16px; background:var(--accent);
+  border:none; color:#fff; font-family:'Syne',sans-serif; font-size:14px;
+  font-weight:700; letter-spacing:0.1em; text-transform:uppercase;
+  cursor:pointer; transition:all 0.2s; box-shadow:0 4px 24px var(--accent-glow);
+}
+.confirm-btn:active { transform:scale(0.97); opacity:0.88; }
+
+@keyframes slideIn { from{opacity:0;transform:translateY(14px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+.new-item { animation:slideIn 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <span class="header-title">Habitudes</span>
+    <button class="add-btn" onclick="openModal()">+</button>
+  </div>
+  <div class="gauge-section">
+    <div class="gauge-pill" id="gaugePill">
+      <div class="gauge-fill" id="gaugeFill"></div>
+      <div class="gauge-pct" id="gaugePct">0%</div>
+    </div>
+    <div class="gauge-sub">
+      <div class="gauge-count" id="gaugeCount">0 sur 0</div>
+      <div class="gauge-label" id="gaugeLabel">Habitudes accomplies aujourd'hui</div>
+    </div>
+  </div>
+  <div class="calendar-section"><div class="week-row" id="weekRow"></div></div>
+  <div class="divider"></div>
+  <div class="habits-scroll" id="habitsList"></div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nouvelle habitude</div>
+    <input class="input-field" id="habitNameInput" type="text" placeholder="Nom de l'habitude..." maxlength="40">
+    <div class="emoji-label">Icône</div>
+    <div class="emoji-grid" id="emojiGrid"></div>
+    <button class="confirm-btn" onclick="addHabit()">Ajouter</button>
+  </div>
+</div>
+
+<script>
+const EMOJIS = ['💧','⏰','🚿','🏃','📚','🧘','💪','🥗','😴','🧠','✍️','🎯','🌿','🎵','🧹','💊','🚶','🌅','🍎','☕','🏋️','🧃','📝','🛌','🌙','🔥','❤️','🧴','🎨','🏊','🤸','🥤'];
+
+let habits      = JSON.parse(localStorage.getItem('habits')      || '[]');
+let completions = JSON.parse(localStorage.getItem('completions') || '{}');
+let selectedDate= getTodayKey();
+let selEmoji    = EMOJIS[0];
+let displayedPct= 0;
+let animTimer   = null;
+
+function getTodayKey(){ const d=new Date(); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; }
+function getDateKey(d){ return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; }
+function save(){ localStorage.setItem('habits',JSON.stringify(habits)); localStorage.setItem('completions',JSON.stringify(completions)); }
+function getDoneSet(){ return new Set(completions[selectedDate]||[]); }
+
+/* ── COLOR INTERPOLATION ── */
+function lerpColor(a, b, t) {
+  const ah=[parseInt(a.slice(1,3),16),parseInt(a.slice(3,5),16),parseInt(a.slice(5,7),16)];
+  const bh=[parseInt(b.slice(1,3),16),parseInt(b.slice(3,5),16),parseInt(b.slice(5,7),16)];
+  const r=Math.round(ah[0]+(bh[0]-ah[0])*t);
+  const g=Math.round(ah[1]+(bh[1]-ah[1])*t);
+  const bl2=Math.round(ah[2]+(bh[2]-ah[2])*t);
+  return `rgb(${r},${g},${bl2})`;
+}
+function gaugeColor(pct) {
+  // 0% = red, 50% = yellow, 100% = green
+  if(pct<=50) return lerpColor('#e05252','#e8c23a', pct/50);
+  return lerpColor('#e8c23a','#4ade80', (pct-50)/50);
+}
+function gaugeColorAlpha(pct, a) {
+  if(pct<=50){ const t=pct/50; return `rgba(${Math.round(224+(52-224)*t)},${Math.round(82+(194-82)*t)},${Math.round(82+(58-82)*t)},${a})`; }
+  const t=(pct-50)/50;
+  return `rgba(${Math.round(232+(74-232)*t)},${Math.round(194+(222-194)*t)},${Math.round(58+(128-58)*t)},${a})`;
+}
+function applyGaugeColor(pct) {
+  const col  = gaugeColor(pct);
+  const glow = gaugeColorAlpha(pct, 0.35);
+  const fill = gaugeColorAlpha(pct, 0.2);
+  const fill2= gaugeColorAlpha(pct, 0.05);
+  const pill = document.getElementById('gaugePill');
+  const pctEl= document.getElementById('gaugePct');
+  const fillEl=document.getElementById('gaugeFill');
+  pctEl.style.color      = col;
+  pctEl.style.textShadow = `0 0 60px ${glow}, 0 0 20px ${gaugeColorAlpha(pct,0.4)}`;
+  pill.style.borderColor = col;
+  pill.style.boxShadow   = `0 0 50px ${glow}, inset 0 0 40px rgba(0,0,0,0.6)`;
+  fillEl.style.background= `linear-gradient(90deg, ${fill} 0%, ${fill2} 100%)`;
+}
+
+
+function animateGaugeTo(target, count, total) {
+  if (animTimer) { clearTimeout(animTimer); animTimer=null; }
+  const diff = target - displayedPct;
+  if (diff === 0) { document.getElementById('gaugeCount').textContent=`${count} sur ${total}`; return; }
+  const dir = diff > 0 ? 1 : -1;
+  const stepMs = Math.max(10, Math.min(28, Math.round(550 / Math.abs(diff))));
+
+  function step() {
+    displayedPct += dir;
+    document.getElementById('gaugePct').textContent  = displayedPct + '%';
+    document.getElementById('gaugeFill').style.width = displayedPct + '%';
+    applyGaugeColor(displayedPct);
+    if (displayedPct !== target) {
+      animTimer = setTimeout(step, stepMs);
+    } else {
+      document.getElementById('gaugeCount').textContent = `${count} sur ${total}`;
+      animTimer = null;
+    }
+  }
+  step();
+}
+
+function updateGauge() {
+  const done  = getDoneSet();
+  const total = habits.length;
+  const count = habits.filter(h=>done.has(h.id)).length;
+  const pct   = total===0 ? 0 : Math.round((count/total)*100);
+  animateGaugeTo(pct, count, total);
+  // Show past day label
+  const isToday = selectedDate === getTodayKey();
+  document.getElementById('gaugeLabel').textContent = isToday
+    ? "Habitudes accomplies aujourd'hui"
+    : "Habitudes accomplies ce jour-là";
+}
+
+/* ── CALENDAR ── */
+function renderWeek() {
+  const row=document.getElementById('weekRow'); row.innerHTML='';
+  const today=new Date(), dow=today.getDay(), off=dow===0?-6:1-dow;
+  const mon=new Date(today); mon.setDate(today.getDate()+off);
+  const N=['LUN','MAR','MER','JEU','VEN','SAM','DIM'];
+  const todayKey=getTodayKey();
+  for(let i=0;i<7;i++){
+    const d=new Date(mon); d.setDate(mon.getDate()+i);
+    const key=getDateKey(d);
+    const isToday=key===todayKey;
+    const isPast=d<today && !isToday;
+    const isFuture=d>today && !isToday;
+    const isSelected=key===selectedDate;
+    const hasDone=(completions[key]||[]).length>0;
+    const c=document.createElement('div');
+    let cls='day-cell';
+    if(isToday) cls+=' today';
+    if(isPast) cls+=' past';
+    if(isFuture) cls+=' future';
+    if(isSelected) cls+=' selected-day';
+    if(hasDone) cls+=' has-completions';
+    c.className=cls;
+    c.dataset.key=key;
+    c.innerHTML=`<span class="day-name">${N[i]}</span><span class="day-num">${d.getDate()}</span><span class="day-dot"></span>`;
+    if(!isFuture){
+      c.addEventListener('click',()=>{
+        vibrate('daySwitch');
+        selectedDate=key;
+        displayedPct=0; // reset so animation plays from 0
+        renderWeek();
+        renderHabits();
+        updateGauge();
+      });
+    }
+    row.appendChild(c);
+  }
+}
+
+/* ── HABIT LIST ── */
+function renderHabits(newId) {
+  const list=document.getElementById('habitsList'), done=getDoneSet();
+  list.innerHTML='';
+  if(!habits.length){
+    list.innerHTML=`<div class="empty-state"><div class="empty-icon">🌱</div><div class="empty-text">Aucune habitude.<br>Appuie sur <strong>+</strong> pour commencer.</div></div>`;
+    return;
+  }
+  habits.forEach(h=>{
+    const isDone=done.has(h.id);
+    const el=document.createElement('div');
+    el.className='habit-item'+(isDone?' done':'')+(h.id===newId?' new-item':'');
+    el.dataset.id=h.id;
+    el.innerHTML=`
+      <div class="habit-delete-bg">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+        </svg>
+      </div>
+      <div class="habit-inner">
+        <div class="habit-left">
+          <div class="habit-emoji-wrap" id="ew-${h.id}">${h.emoji}</div>
+          <span class="habit-name">${h.name}</span>
+        </div>
+        <div class="habit-actions">
+          <div class="habit-check"><span class="check-icon">✓</span></div>
+        </div>
+      </div>`;
+    attachSwipe(el, h.id);
+    el.addEventListener('click',e=>{ toggleHabit(h.id,el,e); });
+    list.appendChild(el);
+  });
+}
+
+/* ── VIBRATE ── */
+function vibrate(pattern) {
+  if(!navigator.vibrate) return;
+  const patterns = {
+    complete:  [12, 35, 55],   // double bump satisfaisant
+    uncomplete:[18],            // tick léger
+    tap:       [8],             // tap léger UI
+    delete:    [6, 20, 6],      // double léger
+    add:       [10, 25, 40],    // montée satisfaisante
+    daySwitch: [6],             // discret
+  };
+  navigator.vibrate(patterns[pattern] || [10]);
+}
+
+/* ── SWIPE TO DELETE ── */
+function attachSwipe(el, id) {
+  const inner = el.querySelector('.habit-inner');
+  const bg    = el.querySelector('.habit-delete-bg');
+  let startX=0, startY=0, curX=0, dragging=false, confirmed=false;
+  const THRESHOLD = 80; // px to trigger delete
+
+  el.addEventListener('touchstart', e=>{
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    curX   = 0; dragging=false; confirmed=false;
+    inner.style.transition='none';
+  }, {passive:true});
+
+  el.addEventListener('touchmove', e=>{
+    const dx = e.touches[0].clientX - startX;
+    const dy = e.touches[0].clientY - startY;
+    if(!dragging && Math.abs(dy) > Math.abs(dx)) return; // vertical scroll wins
+    if(!dragging && Math.abs(dx) < 6) return;
+    dragging = true;
+    if(dx > 0) return; // no right swipe
+    curX = dx;
+    const progress = Math.min(1, Math.abs(dx) / THRESHOLD);
+    inner.style.transform = `translateX(${Math.max(dx, -THRESHOLD*1.3)}px)`;
+    bg.style.opacity = Math.min(1, progress * 1.4);
+    if(Math.abs(dx) >= THRESHOLD && !confirmed) {
+      confirmed = true;
+      vibrate('delete');
+    }
+  }, {passive:true});
+
+  el.addEventListener('touchend', ()=>{
+    inner.style.transition = 'transform 0.3s cubic-bezier(0.25,1,0.5,1)';
+    if(confirmed) {
+      // animate out then delete
+      inner.style.transform = 'translateX(-110%)';
+      el.style.transition   = 'max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease, padding 0.3s ease';
+      el.style.overflow     = 'hidden';
+      setTimeout(()=>{
+        el.style.maxHeight  = el.offsetHeight+'px';
+        el.style.opacity    = '0';
+        void el.offsetHeight;
+        el.style.maxHeight  = '0px';
+        el.style.marginBottom='0'; el.style.paddingTop='0'; el.style.paddingBottom='0';
+        setTimeout(()=>{ deleteHabit(id); }, 300);
+      }, 60);
+    } else {
+      inner.style.transform = 'translateX(0)';
+      bg.style.opacity      = '0';
+    }
+    dragging=false;
+  });
+}
+
+
+function spawnBurst(wrap) {
+  const r=wrap.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
+  const cols=['#4ade80','#86efac','#fbbf24','#fff','#bbf7d0'];
+  for(let i=0;i<10;i++){
+    const ang=(i/10)*Math.PI*2, dist=26+Math.random()*22;
+    const tx=Math.cos(ang)*dist, ty=Math.sin(ang)*dist, sz=4+Math.random()*5;
+    const p=document.createElement('span'); p.className='burst';
+    p.style.cssText=`width:${sz}px;height:${sz}px;left:${cx-sz/2}px;top:${cy-sz/2}px;background:${cols[i%5]};--tx:${tx}px;--ty:${ty}px;position:fixed;z-index:999;`;
+    document.body.appendChild(p); setTimeout(()=>p.remove(),550);
+  }
+}
+
+/* ── TOGGLE ── */
+function toggleHabit(id, el, e) {
+  const done=getDoneSet();
+  if(!completions[selectedDate]) completions[selectedDate]=[];
+  const completing=!done.has(id);
+  const ew=el.querySelector('.habit-emoji-wrap');
+
+  // Ripple — attach to inner so it clips within the sliding layer
+  const inner=el.querySelector('.habit-inner');
+  const rect=inner.getBoundingClientRect(), rip=document.createElement('span');
+  rip.className='ripple';
+  const sz=Math.max(rect.width,rect.height);
+  rip.style.cssText=`width:${sz}px;height:${sz}px;left:${e.clientX-rect.left-sz/2}px;top:${e.clientY-rect.top-sz/2}px`;
+  inner.appendChild(rip); setTimeout(()=>rip.remove(),800);
+
+  // Swoosh
+  const clearAnim=()=>ew.classList.remove('swoosh-out','swoosh-in','swoosh-bout','swoosh-bin');
+  clearAnim(); void ew.offsetWidth;
+  if(completing){
+    ew.classList.add('swoosh-out');
+    setTimeout(()=>{ clearAnim(); void ew.offsetWidth; ew.classList.add('swoosh-in'); setTimeout(()=>clearAnim(),420); },295);
+    spawnBurst(ew);
+  } else {
+    ew.classList.add('swoosh-bout');
+    setTimeout(()=>{ clearAnim(); void ew.offsetWidth; ew.classList.add('swoosh-bin'); setTimeout(()=>clearAnim(),370); },245);
+  }
+
+  vibrate(completing ? 'complete' : 'uncomplete');
+
+  if(completing){ completions[selectedDate].push(id); el.classList.add('done'); }
+  else { completions[selectedDate]=completions[selectedDate].filter(x=>x!==id); el.classList.remove('done'); }
+  save(); updateGauge(); renderWeek();
+}
+
+/* ── DELETE ── */
+function deleteHabit(id){
+  vibrate('delete');
+  habits=habits.filter(h=>h.id!==id);
+  for(const k in completions) completions[k]=completions[k].filter(x=>x!==id);
+  save(); renderHabits(); updateGauge(); renderWeek();
+}
+
+/* ── MODAL ── */
+function renderEmojiGrid(){
+  const g=document.getElementById('emojiGrid'); g.innerHTML='';
+  EMOJIS.forEach(em=>{
+    const b=document.createElement('div');
+    b.className='emoji-option'+(em===selEmoji?' selected':'');
+    b.textContent=em;
+    b.onclick=()=>{ selEmoji=em; g.querySelectorAll('.emoji-option').forEach(x=>x.classList.remove('selected')); b.classList.add('selected'); };
+    g.appendChild(b);
+  });
+}
+function openModal(){ vibrate('tap'); selEmoji=EMOJIS[0]; document.getElementById('habitNameInput').value=''; renderEmojiGrid(); document.getElementById('modalOverlay').classList.add('open'); setTimeout(()=>document.getElementById('habitNameInput').focus(),420); }
+function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); }
+function closeModalOutside(e){ if(e.target===document.getElementById('modalOverlay')) closeModal(); }
+function addHabit(){
+  const name=document.getElementById('habitNameInput').value.trim();
+  if(!name){ document.getElementById('habitNameInput').focus(); return; }
+  const h={id:Date.now().toString(),name,emoji:selEmoji};
+  vibrate('add');
+  habits.push(h); save(); closeModal(); renderHabits(h.id); updateGauge();
+}
+document.getElementById('habitNameInput').addEventListener('keydown',e=>{ if(e.key==='Enter') addHabit(); });
+
+// INIT
+renderWeek(); renderHabits();
+const id=getDoneSet(), it=habits.length, ic=habits.filter(h=>id.has(h.id)).length;
+displayedPct=it===0?0:Math.round((ic/it)*100);
+document.getElementById('gaugePct').textContent=displayedPct+'%';
+document.getElementById('gaugeFill').style.width=displayedPct+'%';
+document.getElementById('gaugeCount').textContent=`${ic} sur ${it}`;
+applyGaugeColor(displayedPct);
+</script>
+</body>
+</html>
